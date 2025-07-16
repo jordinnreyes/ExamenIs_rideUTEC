@@ -19,7 +19,7 @@ def find_ride(ride_id):
 def find_participant(ride, alias):
     return next((p for p in ride.participants if p.participant == alias), None)
 
-# -- ENDPOINTS ---
+# -- ENDPOINTS --
 
 @app.route("/usuarios", methods=["GET"])
 def listar_usuarios():
