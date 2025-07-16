@@ -1,7 +1,7 @@
 import json
-from src.models.user import User
+from src.models.usuario import User
 from src.models.ride import Ride
-from src.models.ride_participation import RideParticipation
+from src.models.rideparticipation import RideParticipation
 
 
 class DataHandler:

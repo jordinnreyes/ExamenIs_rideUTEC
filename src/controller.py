@@ -1,32 +1,29 @@
-
 from flask import Flask, jsonify, request
 from datetime import datetime
-from src.models.user import User
+from src.models.usuario import User
 from src.models.ride import Ride
-from src.models.ride_participation import RideParticipation
+from src.models.rideparticipation import RideParticipation
+from src.data_handler import DataHandler
 
 app = Flask(__name__)
+data_handler = DataHandler()
 
-# Almacenamiento en memoria
-users = []
-rides = []
-ride_id_counter = 1
+# UTILS 
 
-# 🔧 Utilidades
 def find_user(alias):
-    return next((u for u in users if u.alias == alias), None)
+    return next((u for u in data_handler.users if u.alias == alias), None)
 
 def find_ride(ride_id):
-    return next((r for r in rides if str(r.id) == str(ride_id)), None)
+    return next((r for r in data_handler.rides if str(r.id) == str(ride_id)), None)
 
 def find_participant(ride, alias):
     return next((p for p in ride.participants if p.participant == alias), None)
 
-# 📌 Endpoints
+# -- ENDPOINTS ---
 
 @app.route("/usuarios", methods=["GET"])
 def listar_usuarios():
-    return jsonify([u.to_dict() for u in users])
+    return jsonify([u.to_dict() for u in data_handler.users])
 
 @app.route("/usuarios/<alias>", methods=["GET"])
 def obtener_usuario(alias):
@@ -40,7 +37,7 @@ def listar_rides_usuario(alias):
     user = find_user(alias)
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
-    return jsonify([r.to_dict() for r in rides if r.driver == alias])
+    return jsonify([r.to_dict() for r in data_handler.rides if r.driver == alias])
 
 @app.route("/usuarios/<alias>/rides/<ride_id>", methods=["GET"])
 def obtener_ride(alias, ride_id):
@@ -57,7 +54,7 @@ def obtener_ride(alias, ride_id):
             "previousRidesNotMarked": 0,
             "previousRidesRejected": 0
         }
-        for r in rides:
+        for r in data_handler.rides:
             for rp in r.participants:
                 if rp.participant == p.participant:
                     stats["previousRidesTotal"] += 1
@@ -86,20 +83,20 @@ def obtener_ride(alias, ride_id):
 
 @app.route("/usuarios/<alias>/rides/create", methods=["POST"])
 def crear_ride(alias):
-    global ride_id_counter
     user = find_user(alias)
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
     data = request.get_json()
+    ride_id = len(data_handler.rides) + 1
     ride = Ride(
-        ride_id=ride_id_counter,
+        ride_id=ride_id,
         ride_date_time=data["rideDateAndTime"],
         final_address=data["finalAddress"],
         allowed_spaces=data["allowedSpaces"],
         driver_alias=alias
     )
-    rides.append(ride)
-    ride_id_counter += 1
+    data_handler.rides.append(ride)
+    data_handler.save_data()
     return jsonify({"rideId": ride.id}), 201
 
 @app.route("/usuarios/<alias>/rides/<ride_id>/requestToJoin/<participant_alias>", methods=["POST"])
@@ -123,6 +120,7 @@ def request_join(alias, ride_id, participant_alias):
         occupied_spaces=data["occupiedSpaces"]
     )
     ride.participants.append(p)
+    data_handler.save_data()
     return jsonify({"message": "Solicitud enviada"}), 200
 
 @app.route("/usuarios/<alias>/rides/<ride_id>/accept/<participant_alias>", methods=["POST"])
@@ -143,6 +141,7 @@ def accept_participant(alias, ride_id, participant_alias):
 
     participant.status = "confirmed"
     participant.confirmation = datetime.now().isoformat()
+    data_handler.save_data()
     return jsonify({"message": "Participante aceptado"}), 200
 
 @app.route("/usuarios/<alias>/rides/<ride_id>/reject/<participant_alias>", methods=["POST"])
@@ -157,6 +156,7 @@ def reject_participant(alias, ride_id, participant_alias):
 
     participant.status = "rejected"
     participant.confirmation = datetime.now().isoformat()
+    data_handler.save_data()
     return jsonify({"message": "Participante rechazado"}), 200
 
 @app.route("/usuarios/<alias>/rides/<ride_id>/start", methods=["POST"])
@@ -176,6 +176,7 @@ def iniciar_ride(alias, ride_id):
         else:
             p.status = "missing"
     ride.status = "inprogress"
+    data_handler.save_data()
     return jsonify({"message": "Ride iniciado"}), 200
 
 @app.route("/usuarios/<alias>/rides/<ride_id>/end", methods=["POST"])
@@ -185,11 +186,10 @@ def terminar_ride(alias, ride_id):
         return jsonify({"error": "Ride no encontrado"}), 404
 
     for p in ride.participants:
-        if p.status == "inprogress":
-            p.status = "notmarked"
-        elif p.status == "confirmed":
+        if p.status in ["inprogress", "confirmed"]:
             p.status = "notmarked"
     ride.status = "done"
+    data_handler.save_data()
     return jsonify({"message": "Ride finalizado"}), 200
 
 @app.route("/usuarios/<alias>/rides/<ride_id>/unloadParticipant", methods=["POST"])
@@ -205,15 +205,17 @@ def bajar_participante(alias, ride_id):
         return jsonify({"error": "No está en progreso"}), 422
 
     participant.status = "done"
+    data_handler.save_data()
     return jsonify({"message": "Participante bajado"}), 200
 
-# Crear usuarios manualmente para pruebas
 @app.route("/usuarios", methods=["POST"])
 def crear_usuario():
     data = request.get_json()
     if find_user(data["alias"]):
         return jsonify({"error": "Usuario ya existe"}), 422
-    users.append(User(data["alias"], data["name"], data.get("carPlate")))
+    new_user = User(data["alias"], data["name"], data.get("carPlate"))
+    data_handler.users.append(new_user)
+    data_handler.save_data()
     return jsonify({"message": "Usuario creado"}), 201
 
 if __name__ == '__main__':
