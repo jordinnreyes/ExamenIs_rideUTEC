@@ -5,7 +5,51 @@
       "name": "Juan P\u00e9rez",
       "car_plate": null,
       "rides": []
+    },
+    {
+      "alias": "jose",
+      "name": "Juan P\u00e9resz",
+      "car_plate": null,
+      "rides": []
+    },
+    {
+      "alias": "jose2",
+      "name": "Juan P\u00e9resz",
+      "car_plate": null,
+      "rides": []
     }
   ],
-  "rides": []
+  "rides": [
+    {
+      "id": 1,
+      "rideDateAndTime": "2025/07/15 22:00",
+      "finalAddress": "Av Javier Prado 456, San Borja",
+      "allowedSpaces": 3,
+      "driver": "juanp",
+      "status": "done",
+      "participants": [
+        {
+          "participant": "jose",
+          "confirmation": "2025-07-15T21:13:29.648037",
+          "destination": "Av RICARDO PALMA",
+          "occupiedSpaces": "2",
+          "status": "rejected"
+        },
+        {
+          "participant": "jose2",
+          "confirmation": "2025-07-15T21:07:00.693049",
+          "destination": "Av RICARDO PALMA",
+          "occupiedSpaces": 2,
+          "status": "notmarked"
+        },
+        {
+          "participant": "juanp",
+          "confirmation": "2025-07-15T21:13:50.959404",
+          "destination": "Av RICARDO PALMA",
+          "occupiedSpaces": 2,
+          "status": "rejected"
+        }
+      ]
+    }
+  ]
 }
